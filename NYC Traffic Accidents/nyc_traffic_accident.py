@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 
@@ -20,7 +21,7 @@ with col2:
     st.image("nypd-patch.png", width=100)
 
 st.markdown("""
-This application is a Streamlit dashboard that can be used to analyze traffic accidents in NYC 🗽💥🚗. 
+This application is a Streamlit dashboard that can be used to analyze crime accidents in NYC 🗽💥🚗. 
 The data includes information about accident location, date, time, contributing factors, and more. 
 Use the sidebar menu to navigate between different sections of the app.
 """)
@@ -64,6 +65,38 @@ def describe_features(df):
     })
     st.write(features_description)
 
+def visualize_data(df):
+    st.subheader('Visualizing Data')
+    
+    st.write("### Distribution of Crimes by Borough")
+    plt.figure(figsize=(12, 6))
+    sns.countplot(x='BORO_NM', data=df, order=df['BORO_NM'].value_counts().index)
+    st.pyplot(plt)
+    
+    st.write("### Distribution of Crimes by Victim Sex")
+    plt.figure(figsize=(8, 6))
+    sns.countplot(x='Victim Sex', data=df, order=df['Victim Sex'].value_counts().index)
+    st.pyplot(plt)
+
+    st.write("### Distribution of Crimes by Victim Age Group")
+    plt.figure(figsize=(10, 6))
+    sns.countplot(x='Victim Age Group', data=df, order=df['Victim Age Group'].value_counts().index)
+    st.pyplot(plt)
+
+    st.write("### Distribution of Crimes by Start Hour")
+    plt.figure(figsize=(15, 6))
+    sns.histplot(x='Start Hour', data=df, bins=24, kde=True)
+    st.pyplot(plt)
+    
+    st.write("### Heatmap of Crimes by Day of Week and Hour")
+    df['Start Date'] = pd.to_datetime(df['Start Date'])
+    df['Day of Week'] = df['Start Date'].dt.dayofweek
+    day_hour = df.groupby(['Day of Week', 'Start Hour']).size().reset_index(name='Count')
+    day_hour = day_hour.pivot('Day of Week', 'Start Hour', 'Count')
+    plt.figure(figsize=(15, 6))
+    sns.heatmap(day_hour, cmap='coolwarm')
+    st.pyplot(plt)
+
 def draw_map(df):
     # st.subheader("Accident Locations")
     # df = df.dropna(subset=['Latitude', 'Longitude'])
@@ -71,7 +104,7 @@ def draw_map(df):
     st.subheader("Accident Locations")
     df = df.dropna(subset=['lat', 'lon'])
     st.map(df[["lat", "lon"]])
-    
+
 def preprocess_data(df):
     st.header("Add some preprocessing steps here")
 
@@ -90,6 +123,7 @@ def main():
 
     if choice == 'Data Exploration':
         explore_data(df,subheader='Data Exploration')
+        visualize_data(df)
     elif choice == 'Show Features':
         explore_data(df.columns, 'Show Features')
     elif choice == 'Feature Description':
