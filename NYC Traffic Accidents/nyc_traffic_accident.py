@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 st.set_page_config(
-    page_title="NYC Traffic Accident",
+    page_title="NYC Crime Accident",
     page_icon=":red_car:",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -15,7 +15,7 @@ st.set_page_config(
 
 col1, col2 = st.columns([3, 1])
 with col1:
-    st.title("NYC Traffic Accident")
+    st.title("NYC Crime Accident")
 with col2:
     st.image("nypd-patch.png", width=100)
 
@@ -25,7 +25,8 @@ The data includes information about accident location, date, time, contributing 
 Use the sidebar menu to navigate between different sections of the app.
 """)
 def load_data():
-    df = pd.read_csv('NYC Accidents 2020.csv')
+    df = pd.read_csv('output_file.csv')
+    df = df.rename(columns={'Latitude': 'lat', 'Longitude': 'lon'})
     return df
 
 def show_raw_data(df):
@@ -41,43 +42,36 @@ def describe_features(df):
     features_description = pd.DataFrame({
         'Feature': df.columns,
         'Description': [
-            'Crash date',
-            'Crash time',
-            'Borough',
-            'ZIP Code',
-            'Latitude',
-            'Longitude',
-            'Location',
-            'On street name',
-            'Cross street name',
-            'Off street name',
-            'Number of persons injured',
-            'Number of persons killed',
-            'Number of pedestrians injured',
-            'Number of pedestrians killed',
-            'Number of cyclist injured',
-            'Number of cyclist killed',
-            'Number of motorist injured',
-            'Number of motorist killed',
-            'Contributing factor vehicle 1',
-            'Contributing factor vehicle 2',
-            'Contributing factor vehicle 3',
-            'Contributing factor vehicle 4',
-            'Contributing factor vehicle 5',
-            'Collision ID',
-            'Vehicle type code 1',
-            'Vehicle type code 2',
-            'Vehicle type code 3',
-            'Vehicle type code 4',
-            'Vehicle type code 5'
+            'Randomly generated persistent ID for each complaint',
+            'Exact date of occurrence for the reported event (or starting date of occurrence, if CMPLNT_TO_DT exists)',
+            'Exact time of occurrence for the reported event (or starting time of occurrence, if CMPLNT_TO_TM exists)',
+            'Ending date of occurrence for the reported event, if exact time of occurrence is unknown',
+            'Ending time of occurrence for the reported event, if exact time of occurrence is unknown',
+            'Description of offense corresponding with key code',
+            'Indicator of whether crime was successfully completed or attempted, but failed or was interrupted prematurely',
+            'The name of the borough in which the incident occurred',
+            'Midblock Latitude coordinate for Global Coordinate System, WGS 1984, decimal degrees (EPSG 4326)',
+            'Midblock Longitude coordinate for Global Coordinate System, WGS 1984, decimal degrees (EPSG 4326)',
+            'Victim Age Group',
+            'Victim Sex Description',
+            'Exact hour of occurrence for the reported event',
+            'Exact minute of occurrence for the reported event',
+            'Exact second of occurrence for the reported event',
+            'Time of occurrence bucketed into Morning, Afternoon or Evening',
+            'Offense Description',
+            'Crime Category'
         ]
     })
     st.write(features_description)
 
 def draw_map(df):
+    # st.subheader("Accident Locations")
+    # df = df.dropna(subset=['Latitude', 'Longitude'])
+    # st.map(df[["Latitude", "Longitude"]])
     st.subheader("Accident Locations")
-    df = df.dropna(subset=['LATITUDE', 'LONGITUDE'])
-    st.map(df[["LATITUDE", "LONGITUDE"]])
+    df = df.dropna(subset=['lat', 'lon'])
+    st.map(df[["lat", "lon"]])
+    
 def preprocess_data(df):
     st.header("Add some preprocessing steps here")
 
