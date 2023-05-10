@@ -3,7 +3,10 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import classification_report, confusion_matrix
 
 
 st.set_page_config(
@@ -26,7 +29,7 @@ The data includes information about accident location, date, time, contributing 
 Use the sidebar menu to navigate between different sections of the app.
 """)
 def load_data():
-    df = pd.read_csv('output_file.csv')
+    df = pd.read_csv('output_file_may10.csv')
     df = df.rename(columns={'Latitude': 'lat', 'Longitude': 'lon'})
     return df
 
@@ -40,10 +43,10 @@ def explore_data(df, subheader):
 
 def describe_features(df):
     st.subheader('Features Description')
+    
     features_description = pd.DataFrame({
         'Feature': df.columns,
         'Description': [
-            'Randomly generated persistent ID for each complaint',
             'Exact date of occurrence for the reported event (or starting date of occurrence, if CMPLNT_TO_DT exists)',
             'Exact time of occurrence for the reported event (or starting time of occurrence, if CMPLNT_TO_TM exists)',
             'Ending date of occurrence for the reported event, if exact time of occurrence is unknown',
@@ -56,14 +59,13 @@ def describe_features(df):
             'Victim Age Group',
             'Victim Sex Description',
             'Exact hour of occurrence for the reported event',
-            'Exact minute of occurrence for the reported event',
-            'Exact second of occurrence for the reported event',
             'Time of occurrence bucketed into Morning, Afternoon or Evening',
             'Offense Description',
             'Crime Category'
         ]
     })
     st.write(features_description)
+
 
 def visualize_data(df):
     st.subheader('Visualizing Data')
@@ -106,14 +108,44 @@ def draw_map(df):
     st.map(df[["lat", "lon"]])
 
 def preprocess_data(df):
-    st.header("Add some preprocessing steps here")
+    st.header("Preprocessing Data")
+
+    categorical_columns = ['BORO_NM', 'Victim Sex']
+    st.write("### Select a categorical column to encode")
+    column_to_encode = st.selectbox("Choose a column", categorical_columns)
+
+    # Perform One-Hot encoding on the selected column
+    df_encoded = pd.get_dummies(df, columns=[column_to_encode], prefix=column_to_encode)
+
+    # Show the updated DataFrame with encoded columns
+    st.write(df_encoded)
+    return df_encoded
 
 
-def train_model():
-    st.header("Add trainning steps here")
+def train_model(df):
+    st.header("Training the Model")
+    feature_columns = [col for col in df.columns if col.startswith('BORO_NM_') or col.startswith('Victim Sex_') or col == 'Start Hour']
+    X = df[feature_columns]
+    X = df[['BORO_NM_encoded', 'Victim Sex_encoded', 'Start Hour']]
+    y = df['Crime_Category_encoded']
 
-def predict():
-     st.header("Add prediction steps here")
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+    model = DecisionTreeClassifier()
+    model.fit(X_train, y_train)
+
+    st.write("Model trained successfully")
+
+    return model
+
+def predict(model, df):
+    st.header("Making Predictions")
+    X = df[['BORO_NM_encoded', 'Victim Sex_encoded', 'Start Hour']]
+
+    y_pred = model.predict(X)
+
+    df['Predicted Crime Category'] = y_pred
+    st.write(df.head())
 def main():
     df = load_data()
 
@@ -133,7 +165,7 @@ def main():
     elif choice == 'Preprocessing':
         preprocess_data(df)
     elif choice == 'Training':
-        train_model()
+        train_model(df)
     elif choice == 'Prediction':
         predict()
 
