@@ -29,7 +29,7 @@ The data includes information about accident location, date, time, contributing 
 Use the sidebar menu to navigate between different sections of the app.
 """)
 def load_data():
-    df = pd.read_csv('output_file_may10.csv')
+    df = pd.read_csv('output_file.csv')
     df = df.rename(columns={'Latitude': 'lat', 'Longitude': 'lon'})
     return df
 
