@@ -16,6 +16,7 @@ The layout has sidebar with options to filter the dataset
 
 Run the application:
 ```
+cd "NYC Traffic Accidents"
 streamlit run nyc_traffic_accident.py
 ```
 
