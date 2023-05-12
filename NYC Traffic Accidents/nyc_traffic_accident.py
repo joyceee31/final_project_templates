@@ -2,12 +2,22 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import plotly.express as px
 import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import silhouette_score, davies_bouldin_score,calinski_harabasz_score
+from sklearn.cluster import KMeans
+import plotly.express as px
+import folium
+from streamlit_folium import folium_static,st_folium
+import matplotlib.pyplot as plt
+import matplotlib
+import numpy as np
+from sklearn.mixture import GaussianMixture
+from scipy.stats import mode
+
 
 
 st.set_page_config(
@@ -28,8 +38,7 @@ st.markdown("""
 Welcome to the NYC Crime Analysis Dashboard 🗽🔒🚨! 
 This powerful tool allows you to explore and analyze crime data from the vibrant city of New York. 
 Gain valuable insights into crime incidents, patterns, and trends across different boroughs and neighborhoods. 
-Use the interactive sidebar menu to navigate through various sections and unleash the full potential of this dashboard. 
-Uncover hidden patterns, visualize crime hotspots, and delve into the factors that contribute to criminal activities in the city that never sleeps. Let's dive into the data and uncover the stories behind NYC's crime landscape!
+ Let's dive into the data and uncover the stories behind NYC's crime landscape!
 """)
 def load_data():
     df = pd.read_csv('output_file.csv')
@@ -41,20 +50,23 @@ def show_raw_data(df):
     st.write(df)
 def explore_data(df, subheader):
     st.subheader(subheader)
-    
+    print(list(df.columns))
+
     st.write(df)
 
 def describe_features(df):
     st.subheader('Features Description')
     
     features_description = pd.DataFrame({
-        'Feature': df.columns,
+        'Feature': ['Complaint ID', 'Start Date', 'Start Time', 'Offense Description', 
+                    'Completion Status', 'BORO_NM', 'Latitude', 'Longitude', 
+                    'Victim Age Group', 'Victim Sex', 'Start Hour', 'Time Bucket', 
+                    'Crime_Category'],
         'Description': [
-            'Exact date of occurrence for the reported event (or starting date of occurrence, if CMPLNT_TO_DT exists)',
-            'Exact time of occurrence for the reported event (or starting time of occurrence, if CMPLNT_TO_TM exists)',
-            'Ending date of occurrence for the reported event, if exact time of occurrence is unknown',
-            'Ending time of occurrence for the reported event, if exact time of occurrence is unknown',
-            'Description of offense corresponding with key code',
+            'Unique identifier for each complaint',
+            'Exact date of occurrence for the reported event (or starting date of occurrence, if end date exists)',
+            'Exact time of occurrence for the reported event (or starting time of occurrence, if end time exists)',
+            'Description of offense',
             'Indicator of whether crime was successfully completed or attempted, but failed or was interrupted prematurely',
             'The name of the borough in which the incident occurred',
             'Midblock Latitude coordinate for Global Coordinate System, WGS 1984, decimal degrees (EPSG 4326)',
@@ -63,11 +75,11 @@ def describe_features(df):
             'Victim Sex Description',
             'Exact hour of occurrence for the reported event',
             'Time of occurrence bucketed into Morning, Afternoon or Evening',
-            'Offense Description',
             'Crime Category'
         ]
     })
     st.write(features_description)
+
 
 
 def visualize_data(df):
@@ -119,13 +131,45 @@ def visualize_data(df):
     plot_dict[plot_name]()
 
 
-# def draw_map(df):
-#     # st.subheader("Accident Locations")
-#     # df = df.dropna(subset=['Latitude', 'Longitude'])
-#     # st.map(df[["Latitude", "Longitude"]])
-#     st.subheader("Accident Locations")
-#     df = df.dropna(subset=['lat', 'lon'])
-#     st.map(df[["lat", "lon"]])
+###################### FETCH DATASET #######################
+
+def show_clusters(df):
+    st.header("Crime Clusters in Manhattan")
+    clustering_method = st.selectbox("Choose a clustering method", ["KMeans", "Gaussian Mixture Model"])
+
+    df['Start Date'] = pd.to_datetime(df['Start Date'], format='%m/%d/%Y')
+
+# Filter the dataset to include only data points from the year 2022
+    df = df[df['Start Date'].dt.year == 2022]
+
+
+    # Create a list of values to remove
+    values_to_remove = ['4. White-Collar Crimes', '5. Drug-Related Crimes', '6. Traffic Offenses', '8. Miscellaneous Crimes']
+
+    # Filter the dataset by excluding the specified values fromb the 'Crime_Category' column
+    df = df[~df['Crime_Category'].isin(values_to_remove)]
+
+    scope_boro = ['MANHATTAN']
+    df = df[df['BORO_NM'].isin(scope_boro)]
+    # Perform KMeans clustering
+    df_crime = df[['lat', 'lon', 'Crime_Category']]
+    if clustering_method == "KMeans":
+        model = KMeans(n_clusters=20)
+    elif clustering_method == "Gaussian Mixture Model":
+        model = GaussianMixture(n_components=13)
+    
+    df_crime['Cluster'] = model.fit_predict(df[['lat', 'lon']])
+    df_cluster_centers = df_crime.groupby('Cluster').agg({'lat': 'mean', 'lon': 'mean', 'Crime_Category': lambda x: mode(x)[0][0]}).reset_index()
+    m = folium.Map(location=[df_crime['lat'].mean(), df_crime['lon'].mean()], zoom_start=13)
+    
+    for idx, row in df_cluster_centers.iterrows():
+        folium.Marker(location=[row['lat'], row['lon']], 
+                      popup=row['Crime_Category'], 
+                      icon=folium.Icon(color='blue')).add_to(m)
+
+    # display the map in Streamlit
+    folium_static(m)
+
 
 def draw_map(df):
     st.subheader("Accident Locations")
@@ -189,12 +233,12 @@ def crime_trends(df):
     fig = px.line(df_trends, x='Start Date', y='Crime_Category', title='Yearly Crime Trends')
     st.plotly_chart(fig)
 
-def top_n_crimes(df, n=10):
-    st.subheader('Top {} Crimes'.format(n))
+    st.subheader('Top {} Crimes'.format(10))
     top_n = df['Offense Description'].value_counts()[:n].reset_index()
     top_n.columns = ['Offense Description', 'Count']
-    fig = px.bar(top_n, x='Offense Description', y='Count', title='Top {} Crimes'.format(n))
+    fig = px.bar(top_n, x='Offense Description', y='Count', title='Top {} Crimes'.format(10))
     st.plotly_chart(fig)
+    
 
 def predict(model, df):
     st.header("Making Predictions")
@@ -204,16 +248,46 @@ def predict(model, df):
 
     df['Predicted Crime Category'] = y_pred
     st.write(df.head())
+
+def draw_clusters_map(df):
+    st.subheader("Map of Accidents Clusters in Manhattan")
+
+    # Create a map centered around Manhattan
+    map_data = folium.Map(location=[40.7831, -73.9712], zoom_start=11)
+
+    # Convert DataFrame to GeoDataFrame
+    gdf = gpd.GeoDataFrame(
+        df, geometry=gpd.points_from_xy(df.lon, df.lat))
+
+    # Create a color dictionary for clusters
+    colors = plt.cm.rainbow(np.linspace(0, 1, len(df['y'].unique())))
+
+    color_dict = {}
+    for idx, label in enumerate(df['y'].unique()):
+        color_dict[label] = colors[idx]
+
+    # Add points to the map
+    for lat, lon, label in zip(df['lat'], df['lon'], df['y']):
+        folium.CircleMarker(
+            [lat, lon],
+            radius=5,
+            color=matplotlib.colors.rgb2hex(color_dict[label]),
+            fill=True,
+            fill_color=matplotlib.colors.rgb2hex(color_dict[label]),
+            fill_opacity=0.6
+        ).add_to(map_data)
+
+    # Display the map in the app
+    folium_static(map_data)
+
+
 def main():
     df = load_data()
 
     # Create a selectboxed menu at sidebar
-    menu = ['Data Exploration', 'Show Features', 'Feature Description', 'Feature Importance', 'Crime Trends', 'Top N Crimes',"Show Map", "Preprocessing", "Training", "Prediction"]
+    menu = ['Data Exploration', 'Feature Description', 'Crime Trends', 'Show Clusters', "Show Map", "Preprocessing", "Training", "Prediction"]
     choice = st.sidebar.selectbox("Menu", menu)
 
-    # if choice == 'Data Exploration':
-    #     explore_data(df,subheader='Data Exploration')
-    #     visualize_data(df)
     if choice == 'Data Exploration':
         st.subheader('Data Exploration')
         st.markdown("""
@@ -222,8 +296,6 @@ def main():
         """)
         explore_data(df,subheader='Raw Data')
         visualize_data(df)
-    elif choice == 'Show Features':
-        explore_data(df.columns, 'Show Features')
     elif choice == 'Feature Description':
         describe_features(df)
     elif choice == 'Show Map':
@@ -236,16 +308,25 @@ def main():
     elif choice == 'Preprocessing':
         preprocess_data(df)
     elif choice == 'Training':
-        train_model(df)
-
+        st.markdown("""
+        The dataset used for this project has the following specifics:
+        
+        • **Borough**: We will focus solely on Manhattan, disregarding the other boroughs.
+        
+        • **Year**: We will only consider data from the year 2022, narrowing down the range from 2021-2022.
+        
+        • **Crime Category**: We will concentrate on three categories—Violent Crimes, Sexual Crimes, and Property Crimes—selected from a total of eight categories.
+        
+        By implementing these filters, we were able to reduce the dataset size to 102,032 data points.
+        """)
+        show_clusters(df)
+    # elif choice == 'Training':
+    #     train_model(df)
+    #     draw_clusters_map(df)  # Add this line
     elif choice == 'Crime Trends':
         crime_trends(df)
-    elif choice == 'Top N Crimes':
-        top_n_crimes(df)
     elif choice == 'Prediction':
         predict()
-
         
-
 if __name__ == '__main__':
     main()
