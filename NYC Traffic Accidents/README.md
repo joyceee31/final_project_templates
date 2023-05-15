@@ -31,8 +31,9 @@ pip install -r requirements.txt
 
 Run the following command in your terminal to start the Streamlit app:
 
-```shell
-streamlit run app.py
+```
+cd "NYC Traffic Accidents"
+streamlit run nyc_traffic_accident.py
 ```
 
 You can navigate through different features of the app using the sidebar menu.
@@ -51,19 +52,11 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## Contact
 
-If you want to contact me you can reach me at `your_email@domain.com`.
+If you want to contact me you can reach me at `jc2888@cornell.edu`.
 
 ## Project Status
 
 This project is currently in development. More features will be added in the future.
-
----
-
-*Please note: This is a basic template of README. You might want to add more details, adjust sections, or include other information such as screenshots, a list of contributors, or links to related projects or resources.*
-Run the application:
-```
-cd "NYC Traffic Accidents"
-streamlit run nyc_traffic_accident.py
-```
+\
 
 Happy Traveling!
