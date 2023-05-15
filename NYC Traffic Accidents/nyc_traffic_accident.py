@@ -193,15 +193,15 @@ def show_clusters(df):
 
     if clustering_method == "KMeans":
         model = KMeans(n_clusters=20)
+        df_crime['Cluster'] = model.fit_predict(df_crime[['lat', 'lon']])
     elif clustering_method == "Gaussian Mixture Model":
         model = GaussianMixture(n_components=13)
+        df_crime['Cluster'] = model.fit_predict(df_crime[['lat', 'lon']])
     elif clustering_method == "DBScan":
         scaler = StandardScaler()
         X = scaler.fit_transform(df_crime[['lat', 'lon']])
         model = DBSCAN(eps=0.5, min_samples=5)
         df_crime['Cluster'] = model.fit_predict(X)
-    else:
-        df_crime['Cluster'] = model.fit_predict(df_crime[['lat', 'lon']])
 
     df_cluster_centers = df_crime.groupby('Cluster').agg(
         {'lat': 'mean', 'lon': 'mean', 'Crime_Category': lambda x: mode(x)[0][0]}).reset_index()
