@@ -177,7 +177,7 @@ def show_clusters(df):
     scores_df = pd.DataFrame({
         'KMeans': [k_score],
         'Mixture Model': [g_score],
-        'DBScan': [0.8546630132415487]
+        'DBScan': ["Didn't work as expected due to the size of the dataset"]
     }, index=['DB Score'])
 
     # Display the table
